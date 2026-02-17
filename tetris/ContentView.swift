@@ -8,54 +8,62 @@
 import SwiftUI
 import SwiftData
 
-struct ContentView: View {
-    @Environment(\.modelContext) private var modelContext
-    @Query private var items: [Item]
-
+struct CellView: View {
+    let blockType: BlockType
+    
     var body: some View {
-        NavigationSplitView {
-            List {
-                ForEach(items) { item in
-                    NavigationLink {
-                        Text("Item at \(item.timestamp, format: Date.FormatStyle(date: .numeric, time: .standard))")
-                    } label: {
-                        Text(item.timestamp, format: Date.FormatStyle(date: .numeric, time: .standard))
+        Rectangle()
+            .fill(blockType.color)
+            .border(Color.gray.opacity(0.3), width: 1)
+    }
+}
+
+struct BoardView: View {
+    let board: [[BlockType]]
+    
+    var body: some View {
+        VStack(spacing: 0) {
+            ForEach(0..<board.count, id: \.self) { row in
+                HStack(spacing: 0) {
+                    ForEach(0..<board[row].count, id: \.self) { col in
+                        CellView(blockType: board[row][col])
+                            .aspectRatio(1, contentMode: .fit)
                     }
                 }
-                .onDelete(perform: deleteItems)
             }
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    EditButton()
-                }
-                ToolbarItem {
-                    Button(action: addItem) {
-                        Label("Add Item", systemImage: "plus")
-                    }
-                }
-            }
-        } detail: {
-            Text("Select an item")
         }
+        .background(Color.white)
+        .border(Color.gray.opacity(0.3), width: 2)
     }
+}
 
-    private func addItem() {
-        withAnimation {
-            let newItem = Item(timestamp: Date())
-            modelContext.insert(newItem)
-        }
-    }
+struct ContentView: View {
+    @StateObject private var game = TetrisGame()
 
-    private func deleteItems(offsets: IndexSet) {
-        withAnimation {
-            for index in offsets {
-                modelContext.delete(items[index])
+    var body: some View {        
+        BoardView(board: game.getBoardWithCurrentBlock())
+            .frame(width: 300, height: 600)
+            .padding()
+        
+        HStack(spacing: 20) {
+            Button(action: {
+                game.startGame()
+            }) {
+                Text("Start")
+                    .font(.title2)
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 40)
+                    .padding(.vertical, 15)
+                    .background(Color.green)
+                    .cornerRadius(10)
             }
         }
+
     }
 }
 
 #Preview {
     ContentView()
         .modelContainer(for: Item.self, inMemory: true)
+    
 }
