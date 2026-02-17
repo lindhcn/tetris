@@ -15,7 +15,7 @@ class TetrisGame: ObservableObject {
     @Published var currentBlock: Tetromino?
     @Published var isGameActive = false
     
-    private var timer: Timer?
+    private var TetrisTimer: Timer?
 
     
     init() {
@@ -43,7 +43,7 @@ class TetrisGame: ObservableObject {
     func canMoveDown(_ block: Tetromino) -> Bool {
         for position in block.positions {
             let newRow = position.row + 1
-            if (position.row >= TetrisGame.rows) {
+            if (newRow >= TetrisGame.rows) {
                 return false
             }
             if board[newRow][position.col] != .empty {
@@ -55,19 +55,25 @@ class TetrisGame: ObservableObject {
     
     private func gameLoop() {
         guard var block = currentBlock else { return }
-        
         if canMoveDown(block) {
+
             block.moveDown()
+
             currentBlock = block
+            print(currentBlock)
         } else {
-            // Spawn new block
-            lockBlock(block)
-            spawnBlock()
+            cancelTimer()
         }
+        
     }
+    func cancelTimer() {
+            // Call cancel() on the AnyCancellable instance
+        TetrisTimer?.invalidate()
+        TetrisTimer = nil // Set the reference to nil after cancellation
+        }
 
     private func startTimer() {
-        timer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { [weak self] _ in
+        TetrisTimer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { [weak self] _ in
             self?.gameLoop()
         }
     }
@@ -83,7 +89,6 @@ class TetrisGame: ObservableObject {
 
     func getBoardWithCurrentBlock() -> [[BlockType]] {
         var displayBoard = board
-        
         if let block = currentBlock {
             for position in block.positions {
                 if position.row >= 0 && position.row < TetrisGame.rows &&
@@ -92,7 +97,7 @@ class TetrisGame: ObservableObject {
                 }
             }
         }
-        
+
         return displayBoard
     }
 
