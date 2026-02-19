@@ -37,7 +37,21 @@ class TetrisGame: ObservableObject {
     }
     
     func spawnBlock() {
-        currentBlock = Tetromino.createI(at: Position(row: 0, col: 3))
+        currentBlock = Tetromino.createS(at: Position(row: 0, col: 3), at: 0)
+        /*let blockTypes = ["I", "J", "O", "L"]
+        let rotations = [0, 1, 2, 3]
+        let chosenBlock = blockTypes.randomElement()!
+        let chosenRot = rotations.randomElement()!
+        
+        if chosenBlock == "I" {
+            currentBlock = Tetromino.createI(at: Position(row: 0, col: 3), at: chosenRot)
+        } else if chosenBlock == "J" {
+            currentBlock = Tetromino.createJ(at: Position(row: 0, col: 3), at: chosenRot)
+        } else if chosenBlock == "O" {
+            currentBlock = Tetromino.createO(at: Position(row: 0, col: 3), at: chosenRot)
+        } else {
+            currentBlock = Tetromino.createL(at: Position(row: 0, col: 3), at: chosenRot)
+        }*/
     }
     
     func canMoveDown(_ block: Tetromino) -> Bool {
@@ -56,13 +70,13 @@ class TetrisGame: ObservableObject {
     private func gameLoop() {
         guard var block = currentBlock else { return }
         if canMoveDown(block) {
-
             block.moveDown()
-
             currentBlock = block
-            print(currentBlock)
         } else {
-            cancelTimer()
+            // Lock block in place
+            lockBlock(block)
+            // Spawn new block
+            spawnBlock()
         }
         
     }
@@ -87,6 +101,34 @@ class TetrisGame: ObservableObject {
         }
     }
 
+    private func canRotate(_ block: Tetromino) -> Bool {
+        for position in block.positions {
+            if position.row < 0 || position.row >= TetrisGame.rows {
+                return false
+            }
+            if position.col < 0 || position.col >= TetrisGame.cols {
+                return false
+            }
+            
+            if board[position.row][position.col] != .empty {
+                return false
+            }
+        }
+        return true
+    }
+    
+    func rotateCurrentBlock() {
+        guard var block = currentBlock else { return }
+        let originalBlock = block
+        block.rotate()
+
+        if canRotate(block) {
+            currentBlock = block
+        } else {
+            currentBlock = originalBlock
+        }
+    }
+    
     func getBoardWithCurrentBlock() -> [[BlockType]] {
         var displayBoard = board
         if let block = currentBlock {

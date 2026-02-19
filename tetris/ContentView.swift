@@ -44,6 +44,9 @@ struct ContentView: View {
         BoardView(board: game.getBoardWithCurrentBlock())
             .frame(width: 300, height: 600)
             .padding()
+            .onTapGesture {
+                game.rotateCurrentBlock()  // Call a method in your game
+            }
         
         HStack(spacing: 20) {
             Button(action: {
