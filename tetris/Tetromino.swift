@@ -13,6 +13,8 @@ enum BlockType {
     case O
     case L
     case S
+    case Z
+    case T
     case empty
     
     var color: Color {
@@ -21,7 +23,9 @@ enum BlockType {
         case .J: return .blue
         case .O: return .yellow
         case .L: return .orange
-        case .S: return .pink
+        case .S: return .green
+        case .Z: return .red
+        case .T: return .purple
         case .empty: return .clear
         }
     }
@@ -69,7 +73,41 @@ struct Tetromino {
         }
         return block
     }
+    
+    static func createT(at position: Position, at rot: Int) -> Tetromino {
+        var block = Tetromino(
+            type: .T,
+            positions: [
+                Position(row: position.row, col: position.col + 1),
+                Position(row: position.row, col: position.col),
+                Position(row: position.row, col: position.col - 1),
+                Position(row: position.row - 1, col: position.col)
+            ],
+            rotation: rot
+        )
+        for _ in 0..<rot {
+            block.rotate()
+        }
+        return block
+    }
 
+    
+    static func createZ(at position: Position, at rot: Int) -> Tetromino {
+        var block = Tetromino(
+            type: .Z,
+            positions: [
+                Position(row: position.row, col: position.col + 1),
+                Position(row: position.row, col: position.col),
+                Position(row: position.row - 1, col: position.col - 1),
+                Position(row: position.row - 1, col: position.col)
+            ],
+            rotation: rot
+        )
+        for _ in 0..<rot {
+            block.rotate()
+        }
+        return block
+    }
     
     static func createJ(at position: Position, at rot: Int) -> Tetromino {
         var block = Tetromino(
@@ -125,6 +163,8 @@ struct Tetromino {
     }
     
     mutating func rotate() {
+        let pivot = positions[1]
+
         if type == .I {
             let pivot = positions[1]
             if rotation % 2 == 0 { // horizontal to vertical
@@ -145,29 +185,112 @@ struct Tetromino {
             rotation = (rotation + 1) % 4
         }
         else if type == .S { // need four rotations for s and z block Look Closely.
-            let pivot = positions[1]
             
-            if rotation % 2 == 0 {  // horizontal S
-                positions = [
-                    Position(row: pivot.row, col: pivot.col + 1),
-                    Position(row: pivot.row, col: pivot.col),
-                    Position(row: pivot.row + 1, col: pivot.col),
-                    Position(row: pivot.row + 1, col: pivot.col - 1)
-                ]
-            } else {  // vertical S
+            if rotation == 0 {  // horizontal S
                 positions = [
                     Position(row: pivot.row - 1, col: pivot.col),
                     Position(row: pivot.row, col: pivot.col),
                     Position(row: pivot.row, col: pivot.col + 1),
                     Position(row: pivot.row + 1, col: pivot.col + 1)
                 ]
+                rotation = 1
+            } else if rotation == 1 {  // vertical S
+                positions = [
+                    Position(row: pivot.row, col: pivot.col + 1),
+                    Position(row: pivot.row, col: pivot.col),
+                    Position(row: pivot.row + 1, col: pivot.col),
+                    Position(row: pivot.row + 1, col: pivot.col - 1)
+                ]
+                rotation = 2
+            } else if rotation == 2 {
+                positions = [
+                    Position(row: pivot.row - 1, col: pivot.col - 1),
+                    Position(row: pivot.row, col: pivot.col),
+                    Position(row: pivot.row, col: pivot.col - 1),
+                    Position(row: pivot.row + 1, col: pivot.col)
+                ]
+                rotation = 3
+            } else {
+                positions = [
+                    Position(row: pivot.row, col: pivot.col - 1),
+                    Position(row: pivot.row, col: pivot.col),
+                    Position(row: pivot.row - 1, col: pivot.col),
+                    Position(row: pivot.row - 1, col: pivot.col + 1)
+                ]
+                rotation = 0
             }
-            
-            rotation = (rotation + 1) % 4
         }
-
+        else if type == .Z {
+            if rotation == 3 {
+                positions = [
+                    Position(row: pivot.row - 1, col: pivot.col - 1),
+                    Position(row: pivot.row, col: pivot.col),
+                    Position(row: pivot.row - 1, col: pivot.col),
+                    Position(row: pivot.row, col: pivot.col + 1)
+                ]
+                rotation = 0
+            } else if rotation == 0 {
+                positions = [
+                    Position(row: pivot.row - 1, col: pivot.col + 1),
+                    Position(row: pivot.row, col: pivot.col),
+                    Position(row: pivot.row, col: pivot.col + 1),
+                    Position(row: pivot.row + 1, col: pivot.col)
+                ]
+                rotation = 1
+            } else if rotation == 1 {
+                positions = [
+                    Position(row: pivot.row, col: pivot.col - 1),
+                    Position(row: pivot.row, col: pivot.col),
+                    Position(row: pivot.row + 1, col: pivot.col + 1),
+                    Position(row: pivot.row + 1, col: pivot.col)
+                ]
+                rotation = 2
+            } else {
+                positions = [
+                    Position(row: pivot.row - 1, col: pivot.col),
+                    Position(row: pivot.row, col: pivot.col),
+                    Position(row: pivot.row, col: pivot.col - 1),
+                    Position(row: pivot.row + 1, col: pivot.col - 1)
+                ]
+                rotation = 3
+            }
+        }
+        else if type == .T {
+            if rotation == 0 {
+                positions = [
+                    Position(row: pivot.row - 1, col: pivot.col),
+                    Position(row: pivot.row, col: pivot.col),
+                    Position(row: pivot.row + 1, col: pivot.col),
+                    Position(row: pivot.row, col: pivot.col + 1)
+                ]
+                rotation = 1
+            } else if rotation == 1 {
+                positions = [
+                    Position(row: pivot.row, col: pivot.col - 1),
+                    Position(row: pivot.row, col: pivot.col),
+                    Position(row: pivot.row, col: pivot.col + 1),
+                    Position(row: pivot.row + 1, col: pivot.col)
+                ]
+                rotation = 2
+            } else if rotation == 2 {
+                positions = [
+                    Position(row: pivot.row + 1, col: pivot.col),
+                    Position(row: pivot.row, col: pivot.col),
+                    Position(row: pivot.row, col: pivot.col - 1),
+                    Position(row: pivot.row, col: pivot.col + 1)
+                ]
+                rotation = 3
+            } else {
+                positions = [
+                    Position(row: pivot.row + 1, col: pivot.col),
+                    Position(row: pivot.row, col: pivot.col),
+                    Position(row: pivot.row, col: pivot.col - 1),
+                    Position(row: pivot.row, col: pivot.col + 1)
+                ]
+                rotation = 0
+            }
+        }
         else if type == .J {
-            let pivot = positions[1]
             if rotation == 0 {
                 positions = [
                     Position(row: pivot.row - 1, col: pivot.col),
@@ -194,7 +317,7 @@ struct Tetromino {
                 rotation = 3
             } else {
                 positions = [
-                    Position(row: pivot.row + 1, col: pivot.col - 1),
+                    Position(row: pivot.row - 1, col: pivot.col - 1),
                     Position(row: pivot.row, col: pivot.col),
                     Position(row: pivot.row, col: pivot.col - 1),
                     Position(row: pivot.row, col: pivot.col + 1)
@@ -203,7 +326,6 @@ struct Tetromino {
             }
         }
         else if type == .L {
-            let pivot = positions[1]
             if rotation == 0 {
                 positions = [
                     Position(row: pivot.row - 1, col: pivot.col),
@@ -233,7 +355,7 @@ struct Tetromino {
                     Position(row: pivot.row, col: pivot.col - 1),
                     Position(row: pivot.row, col: pivot.col),
                     Position(row: pivot.row, col: pivot.col + 1),
-                    Position(row: pivot.row - 1, col: pivot.col - 1),
+                    Position(row: pivot.row - 1, col: pivot.col + 1),
                 ]
                 rotation = 0
             }

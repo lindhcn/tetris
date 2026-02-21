@@ -47,6 +47,31 @@ struct ContentView: View {
             .onTapGesture {
                 game.rotateCurrentBlock()  // Call a method in your game
             }
+            .gesture(
+            DragGesture(minimumDistance: 20)
+                .onEnded { value in
+                    let horizontalAmount = value.translation.width
+                    let verticalAmount = value.translation.height
+                    
+                    // Determine if swipe is more horizontal or vertical
+                    if abs(horizontalAmount) > abs(verticalAmount) {
+                        // Horizontal swipe
+                        if horizontalAmount < 0 {
+                            // Swipe left
+                            game.moveLeft()
+                        } else {
+                            // Swipe right
+                            game.moveRight()
+                        }
+                    } /*else {
+                        // Vertical swipe
+                        if verticalAmount > 0 {
+                            // Swipe down - could make block drop faster
+                            game.dropFaster()
+                        }
+                    }*/
+                }
+            )
         
         HStack(spacing: 20) {
             Button(action: {

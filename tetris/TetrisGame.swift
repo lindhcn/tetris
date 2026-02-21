@@ -37,8 +37,8 @@ class TetrisGame: ObservableObject {
     }
     
     func spawnBlock() {
-        currentBlock = Tetromino.createS(at: Position(row: 0, col: 3), at: 0)
-        /*let blockTypes = ["I", "J", "O", "L"]
+
+        let blockTypes = ["I", "J", "O", "L", "S", "Z", "T"]
         let rotations = [0, 1, 2, 3]
         let chosenBlock = blockTypes.randomElement()!
         let chosenRot = rotations.randomElement()!
@@ -49,9 +49,15 @@ class TetrisGame: ObservableObject {
             currentBlock = Tetromino.createJ(at: Position(row: 0, col: 3), at: chosenRot)
         } else if chosenBlock == "O" {
             currentBlock = Tetromino.createO(at: Position(row: 0, col: 3), at: chosenRot)
-        } else {
+        } else if chosenBlock == "S" {
+            currentBlock = Tetromino.createS(at: Position(row: 0, col: 4), at: 0)
+        } else if chosenBlock == "T" {
+            currentBlock = Tetromino.createT(at: Position(row: 0, col: 4), at: 0)
+         } else if chosenBlock == "Z" {
+             currentBlock = Tetromino.createZ(at: Position(row: 0, col: 4), at: 0)
+         } else {
             currentBlock = Tetromino.createL(at: Position(row: 0, col: 3), at: chosenRot)
-        }*/
+        }
     }
     
     func canMoveDown(_ block: Tetromino) -> Bool {
@@ -66,7 +72,55 @@ class TetrisGame: ObservableObject {
         }
         return true
     }
+
+    func canMoveRight(_ block: Tetromino) -> Bool {
+        for position in block.positions {
+            let newCol = position.col + 1
+            if (newCol >= TetrisGame.cols) {
+                return false
+            }
+            if board[position.row][newCol] != .empty {
+                return false
+            }
+        }
+        return true
+    }
+    func canMoveLeft(_ block: Tetromino) -> Bool {
+        for position in block.positions {
+            let newCol = position.col - 1
+            if (newCol < 0) {
+                return false
+            }
+            if board[position.row][newCol] != .empty {
+                return false
+            }
+        }
+        return true
+    }
+    func moveLeft() {
+        guard var block = currentBlock else { return }
+        
+        if canMoveLeft(block) {
+            // Update positions
+            block.positions = block.positions.map {
+                Position(row: $0.row, col: $0.col - 1)
+            }
+            currentBlock = block
+        }
+    }
     
+    func moveRight() {
+        guard var block = currentBlock else { return }
+        
+        if canMoveRight(block) {
+            block.positions = block.positions.map {
+                Position(row: $0.row, col: $0.col + 1)
+            }
+            currentBlock = block
+        }
+    }
+    
+
     private func gameLoop() {
         guard var block = currentBlock else { return }
         if canMoveDown(block) {
@@ -87,7 +141,7 @@ class TetrisGame: ObservableObject {
         }
 
     private func startTimer() {
-        TetrisTimer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { [weak self] _ in
+        TetrisTimer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in
             self?.gameLoop()
         }
     }
