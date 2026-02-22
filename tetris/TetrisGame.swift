@@ -14,7 +14,7 @@ class TetrisGame: ObservableObject {
     @Published var board: [[BlockType]]
     @Published var currentBlock: Tetromino?
     @Published var isGameActive = false
-    
+    @Published var isGameOver = false
     private var TetrisTimer: Timer?
 
     
@@ -25,6 +25,7 @@ class TetrisGame: ObservableObject {
 
     func startGame() {
         resetBoard()
+        isGameOver = false
         spawnBlock()
         isGameActive = true
         startTimer()
@@ -37,7 +38,6 @@ class TetrisGame: ObservableObject {
     }
     
     func spawnBlock() {
-
         let blockTypes = ["I", "J", "O", "L", "S", "Z", "T"]
         let rotations = [0, 1, 2, 3]
         let chosenBlock = blockTypes.randomElement()!
@@ -120,9 +120,36 @@ class TetrisGame: ObservableObject {
         }
     }
     
+    func moveDown() {
+        guard var block = currentBlock else { return }
+        
+        if canMoveDown(block) {
+            block.positions = block.positions.map {
+                Position(row: $0.row + 1, col: $0.col)
+            }
+            currentBlock = block
+        }
+    }
+    
+    private func checkGameOver() -> Bool {
+        guard let block = currentBlock else { return false }
+            
+        for position in block.positions {
+            if position.row >= 0 && position.row < TetrisGame.rows &&
+               position.col >= 0 && position.col < TetrisGame.cols {
+                if board[position.row][position.col] != .empty {
+                    return true  // New block overlaps existing blocks
+                }
+            }
+        }
+        return false
+    }
 
     private func gameLoop() {
         guard var block = currentBlock else { return }
+        
+        
+        
         if canMoveDown(block) {
             block.moveDown()
             currentBlock = block
@@ -131,17 +158,24 @@ class TetrisGame: ObservableObject {
             lockBlock(block)
             // Spawn new block
             spawnBlock()
+            if checkGameOver() {
+                print("GAMEOVER")
+                stopGame()
+                isGameOver = true  // Set the flag
+            }
+
+            
         }
         
     }
-    func cancelTimer() {
-            // Call cancel() on the AnyCancellable instance
+    func stopGame() {
+        isGameActive = false
         TetrisTimer?.invalidate()
-        TetrisTimer = nil // Set the reference to nil after cancellation
-        }
+        TetrisTimer = nil
+    }
 
     private func startTimer() {
-        TetrisTimer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in
+        TetrisTimer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { [weak self] _ in
             self?.gameLoop()
         }
     }
