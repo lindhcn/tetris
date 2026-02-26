@@ -18,6 +18,8 @@ struct CellView: View {
     }
 }
 
+
+
 struct BoardView: View {
     let board: [[BlockType]]
     
@@ -41,81 +43,92 @@ struct BoardView: View {
 struct ContentView: View {
     @StateObject private var game = TetrisGame()
     private let moveSensitivity = 30.0
-    
+    @State private var lastDragTranslation = CGSize.zero
+
     var drag: some Gesture {
         DragGesture(minimumDistance: 10)
-            .onEnded() { value in
-                let horizontalAmount = value.translation.width
-                let verticalAmount = value.translation.height
-                let currentTime = Date()
-                print("DATE: \(currentTime), \(horizontalAmount), \(verticalAmount)")
-                // Determine if swipe is more horizontal or vertical
-                if abs(horizontalAmount) > abs(verticalAmount) {
-                    let movedDist = horizontalAmount / moveSensitivity
-                    for index in 0...abs(Int(movedDist)) {
-                        // Horizontal swipe
-                        if horizontalAmount < 0 {
-                            // Swipe left
-                            game.moveLeft()
-                        } else {
-                            // Swipe right
-                            game.moveRight()
-                        }
+            .onChanged() { value in
+                let currentTranslation = value.translation
+                let deltaX = currentTranslation.width - lastDragTranslation.width
+                let deltaY = currentTranslation.height - lastDragTranslation.height
+                
+                if abs(deltaX) >= moveSensitivity {
+                    if deltaX < 0 {
+                        game.moveLeft()
+                    } else {
+                        game.moveRight()
                     }
+                    lastDragTranslation.width = currentTranslation.width
                 }
-                else {
-                    if verticalAmount > 0 {
-                        let movedDist = verticalAmount / moveSensitivity
-                        for index in 0...abs(Int(movedDist)) {
-                            game.moveDown()
-                        }
+                
+                if abs(deltaY) >= moveSensitivity {
+                    if deltaY > 0 {
+                        game.moveDown()
                     }
+                    lastDragTranslation.height = currentTranslation.height
                 }
             }
+            .onEnded() { _ in
+                lastDragTranslation = .zero  // Reset when drag ends
+            }
+        
     }
-
     
     var body: some View {
-        VStack(spacing: 20) {
-            
-            Text("Tetris")
-                .font(.system(size: 40, weight: .bold))
-                .foregroundColor(.primary)
-            
-            if game.isGameOver {
-                Text("Game Over")
+        VStack(spacing: 15) {
+            // Top row - Next block and Play button
+            HStack(spacing: 40) {
+                let previewPos = Position(row: 0, col: 0)
+
+                let cur = Tetromino.createI(at: previewPos, at: 0)
+
+                //NextView(block: cur).frame(width: 160)
+                NextView(block: game.nextBlock).frame(width: 180, height: 120)
+                
+                Button(action: {
+                    if game.isGameOver {
+                        game.startGame()
+                    } else if game.isGameActive {
+                        game.stopGame()
+                    } else {
+                        game.resumeGame()
+                    }
+                }) {
+                    Image(systemName: game.isGameOver ? "arrow.clockwise" : (game.isGameActive ? "pause.fill" : "play.fill"))
+                        .font(.title2)
+                        .foregroundColor(.white)
+                        .frame(width: 70, height: 70)  // Same size
+                        .background(Color.black)
+                        .clipShape(Circle())
+                }
             }
+            .frame(height: 70)
+            .padding(.horizontal, 20)
+            .padding(.top, 20)
             
+            // Game Over text
+            /*if game.isGameOver {
+                Text("Game Over!")
+                    .font(.system(size: 20, weight: .bold))
+                    .foregroundColor(.red)
+            }*/
             
+            // Game board
             BoardView(board: game.getBoardWithCurrentBlock())
-                .frame(width: 300, height: 600)
-                .padding()
+                .aspectRatio(0.7, contentMode: .fill)
+                .padding(.horizontal, 20)
                 .onTapGesture {
                     game.rotateCurrentBlock()
                 }
                 .gesture(drag)
-        
-            
-            HStack(spacing: 20) {
-                Button(action: {
-                    if game.isGameOver {
-                        game.startGame()  // Restart after game over
-                    } else if game.isGameActive {
-                        game.stopGame()   // Pause active game
-                    } else {
-                        game.startGame()  // Start new game
-                    }
-                }) {
-                    Text(game.isGameOver ? "Restart" : (game.isGameActive ? "Pause" : "Start"))
-                        .font(.title2)
-                        .foregroundColor(.white)
-                        .padding(.horizontal, 40)
-                        .padding(.vertical, 15)
-                        .background(game.isGameOver ? Color.blue : (game.isGameActive ? Color.orange : Color.green))
-                        .cornerRadius(10)
-                }
-            }
+                        
+            // Bottom - Level and Score
+            InfoView(level: game.level, score: game.score)
+                .padding(.horizontal, 20)
+                .padding(.bottom, 30)
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(Color.white)
     }
 }
 

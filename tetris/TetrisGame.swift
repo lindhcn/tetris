@@ -13,8 +13,13 @@ class TetrisGame: ObservableObject {
     
     @Published var board: [[BlockType]]
     @Published var currentBlock: Tetromino?
+    @Published var nextBlock: Tetromino?
     @Published var isGameActive = false
-    @Published var isGameOver = false
+    @Published var isGameOver = true
+    @Published var score = 0
+    @Published var level = 1
+    @Published var linesCleared = 0
+
     private var TetrisTimer: Timer?
 
     
@@ -26,38 +31,109 @@ class TetrisGame: ObservableObject {
     func startGame() {
         resetBoard()
         isGameOver = false
+        generateNextBlock()
         spawnBlock()
         isGameActive = true
+        score = 0
+        level = 1
+        linesCleared = 0
         startTimer()
 
+    }
+    func resumeGame() {
+        isGameActive = true
+        startTimer()
     }
 
     func resetBoard() {
         board = Array(repeating: Array(repeating: BlockType.empty, count: TetrisGame.cols),
                       count: TetrisGame.rows)
     }
-    
-    func spawnBlock() {
-        let blockTypes = ["I", "J", "O", "L", "S", "Z", "T"]
-        let rotations = [0, 1, 2, 3]
+
+    private func generateNextBlock() {
+        let blockTypes: [BlockType] = [.I, .J, .O, .L, .S, .Z, .T]
         let chosenBlock = blockTypes.randomElement()!
-        let chosenRot = rotations.randomElement()!
+        let rotation = 0
         
-        if chosenBlock == "I" {
-            currentBlock = Tetromino.createI(at: Position(row: 0, col: 3), at: chosenRot)
-        } else if chosenBlock == "J" {
-            currentBlock = Tetromino.createJ(at: Position(row: 0, col: 3), at: chosenRot)
-        } else if chosenBlock == "O" {
-            currentBlock = Tetromino.createO(at: Position(row: 0, col: 3), at: chosenRot)
-        } else if chosenBlock == "S" {
-            currentBlock = Tetromino.createS(at: Position(row: 0, col: 4), at: 0)
-        } else if chosenBlock == "T" {
-            currentBlock = Tetromino.createT(at: Position(row: 0, col: 4), at: 0)
-         } else if chosenBlock == "Z" {
-             currentBlock = Tetromino.createZ(at: Position(row: 0, col: 4), at: 0)
-         } else {
-            currentBlock = Tetromino.createL(at: Position(row: 0, col: 3), at: chosenRot)
+        let previewPos = Position(row: 0, col: 0)
+        
+        switch chosenBlock {
+        case .I:
+            nextBlock = Tetromino.createI(at: previewPos, at: rotation)
+        case .J:
+            nextBlock = Tetromino.createJ(at: previewPos, at: rotation)
+        case .O:
+            nextBlock = Tetromino.createO(at: previewPos, at: rotation)
+        case .S:
+            nextBlock = Tetromino.createS(at: previewPos, at: rotation)
+        case .T:
+            nextBlock = Tetromino.createT(at: previewPos, at: rotation)
+        case .Z:
+            nextBlock = Tetromino.createZ(at: previewPos, at: rotation)
+        case .L:
+            nextBlock = Tetromino.createL(at: previewPos, at: rotation)
+        default:
+            break
         }
+    }
+
+    func spawnBlock() {
+        if let next = nextBlock {
+            var block = next
+            let spawnPos = Position(row: 1, col: 3)
+            let offset = Position(row: spawnPos.row - block.positions[0].row,
+                                col: spawnPos.col - block.positions[0].col)
+            
+            block.positions = block.positions.map {
+                Position(row: $0.row + offset.row, col: $0.col + offset.col)
+            }
+            currentBlock = block
+        }
+        
+        // Generate new next block
+        generateNextBlock()
+    }
+    
+    func canClearRows() -> [Int] {
+        var rowsToClear: [Int] = []
+        for row in 0..<TetrisGame.rows {
+            if board[row].allSatisfy({ $0 != .empty }) {
+                rowsToClear.append(row)
+            }
+        }
+        return rowsToClear
+    }
+    
+    func clearRows(_ rowsToClear: [Int]) {
+        let rowsToRemove = Set(rowsToClear)
+        
+        board = board.enumerated()
+            .filter { !rowsToRemove.contains($0.offset) }
+            .map { $0.element }
+        
+        let emptyRows = Array(repeating: Array(repeating: BlockType.empty, count: TetrisGame.cols),
+                             count: rowsToClear.count)
+        board = emptyRows + board
+        updateScore(rowsCleared: rowsToClear.count)
+    }
+    
+    private func updateScore(rowsCleared: Int) {
+        let points: Int
+        switch rowsCleared {
+        case 1:
+            points = 100 * level
+        case 2:
+            points = 300 * level
+        case 3:
+            points = 500 * level
+        case 4:
+            points = 800 * level
+        default:
+            points = 0
+        }
+        
+        score += points
+        linesCleared += rowsCleared
     }
     
     func canMoveDown(_ block: Tetromino) -> Bool {
@@ -65,6 +141,9 @@ class TetrisGame: ObservableObject {
             let newRow = position.row + 1
             if (newRow >= TetrisGame.rows) {
                 return false
+            }
+            if position.col < 0 || position.col >= TetrisGame.cols {
+                continue
             }
             if board[newRow][position.col] != .empty {
                 return false
@@ -79,9 +158,16 @@ class TetrisGame: ObservableObject {
             if (newCol >= TetrisGame.cols) {
                 return false
             }
+            
+            if position.row < 0 || position.row >= TetrisGame.rows {
+                continue
+            }
+
             if board[position.row][newCol] != .empty {
                 return false
             }
+            
+            
         }
         return true
     }
@@ -147,15 +233,17 @@ class TetrisGame: ObservableObject {
 
     private func gameLoop() {
         guard var block = currentBlock else { return }
-        
-        
-        
         if canMoveDown(block) {
             block.moveDown()
             currentBlock = block
         } else {
             // Lock block in place
             lockBlock(block)
+            let rowsToClear = canClearRows()
+            if !rowsToClear.isEmpty {
+                print(rowsToClear)
+                clearRows(rowsToClear)
+            }
             // Spawn new block
             spawnBlock()
             if checkGameOver() {
